@@ -1,40 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Speologie QR
 
-## Getting Started
+Next.js app for managing QR codes and assigning redirect URLs. QR codes are stored in Supabase.
 
-First, run the development server:
+## Setup
+
+### 1. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run migrations in order:
+   - `supabase/migrations/001_create_speologieqr.sql`
+   - `supabase/migrations/002_caves_and_rename.sql`
+
+### 2. Environment
+
+Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Get your URL and anon key from: **Supabase Dashboard → Project Settings → API**
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+### 3. Run
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+```bash
+npm install
+npm run dev
+```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+Open [http://localhost:3000](http://localhost:3000).
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
 
-## Learn More
+- **List** – View all QR codes at `/qr`
+- **Create** – Add new QR codes at `/qr/new` (slug auto-generated, cave lookup by title)
+- **Edit** – Update slug and cave at `/qr/[id]/edit`
+- **Delete** – Remove QR codes from the list view
+- **Cave autocomplete** – Search caves by title (diacritics ignored, e.g. "Petera" matches "Peştera")
 
-To learn more about Next.js, take a look at the following resources:
+## Database
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+**speologieqr**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Column     | Type        | Description                    |
+|------------|-------------|--------------------------------|
+| id         | UUID        | Primary key (auto)             |
+| slug       | TEXT        | Unique path, e.g. `speologie/qr/abc123` |
+| caves_id   | UUID        | FK to speologiepesteri         |
+| created_at | TIMESTAMPTZ | Auto-set on insert             |
+| updated_at | TIMESTAMPTZ | Auto-updated on change         |
 
-## Deploy on Vercel
+**speologiepesteri** (caves)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Column     | Type        | Description    |
+|------------|-------------|----------------|
+| id         | UUID        | Primary key    |
+| title      | TEXT        | Cave name      |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## API
+
+- `GET /api/qr` – List all (includes cave title)
+- `POST /api/qr` – Create (body: `{ caves_id }`)
+- `GET /api/qr/[id]` – Get one
+- `PUT /api/qr/[id]` – Update (body: `{ slug?, caves_id? }`)
+- `DELETE /api/qr/[id]` – Delete
+- `GET /api/caves?q=...` – Search caves by title (diacritic-insensitive)
