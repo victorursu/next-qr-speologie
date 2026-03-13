@@ -45,6 +45,7 @@ export default function QRListPage() {
     slug: string;
     pushpins: PushpinRecord[];
   } | null>(null);
+  const [includeLogo, setIncludeLogo] = useState(true);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -84,20 +85,23 @@ export default function QRListPage() {
     setPushpinModal({ slug: item.slug, pushpins });
   };
 
-  const handleDownload = async (qrUrl: string, slug: string) => {
-    try {
-      const size = 512;
-      const logoSize = 128;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
+  const generateQrDataUrl = async (
+    url: string,
+    withLogo: boolean
+  ): Promise<string> => {
+    const size = 512;
+    const logoSize = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
 
-      await QRCode.toCanvas(canvas, qrUrl, {
-        width: size,
-        margin: 2,
-        errorCorrectionLevel: "H",
-      });
+    await QRCode.toCanvas(canvas, url, {
+      width: size,
+      margin: 2,
+      errorCorrectionLevel: "H",
+    });
 
+    if (withLogo) {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         const logo = new Image();
@@ -115,8 +119,13 @@ export default function QRListPage() {
           logo.src = "/speologie-org.png";
         });
       }
+    }
+    return canvas.toDataURL("image/png");
+  };
 
-      const dataUrl = canvas.toDataURL("image/png");
+  const handleDownload = async (qrUrl: string, slug: string) => {
+    try {
+      const dataUrl = await generateQrDataUrl(qrUrl, includeLogo);
       const link = document.createElement("a");
       link.download = `${slug.replace(/\//g, "-")}.png`;
       link.href = dataUrl;
@@ -127,39 +136,6 @@ export default function QRListPage() {
     }
   };
 
-  const generateQrDataUrl = async (url: string): Promise<string> => {
-    const size = 512;
-    const logoSize = 128;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-
-    await QRCode.toCanvas(canvas, url, {
-      width: size,
-      margin: 2,
-      errorCorrectionLevel: "H",
-    });
-
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        logo.onload = () => {
-          const x = (size - logoSize) / 2;
-          const y = (size - logoSize) / 2;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x, y, logoSize, logoSize);
-          ctx.drawImage(logo, x, y, logoSize, logoSize);
-          resolve();
-        };
-        logo.onerror = reject;
-        logo.src = "/speologie-org.png";
-      });
-    }
-    return canvas.toDataURL("image/png");
-  };
-
   const handleDownloadPdf = async (
     qrUrl: string,
     slug: string,
@@ -167,7 +143,7 @@ export default function QRListPage() {
     itemId: string
   ) => {
     try {
-      const dataUrl = await generateQrDataUrl(qrUrl);
+      const dataUrl = await generateQrDataUrl(qrUrl, includeLogo);
       const doc = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
       const qrSize = 120; // 2x original (60)
@@ -187,7 +163,7 @@ export default function QRListPage() {
 
       for (const pin of pushpins) {
         const pushpinUrl = `${PUSHPIN_QR_PREFIX}${pin.identifier}`;
-        const pinDataUrl = await generateQrDataUrl(pushpinUrl);
+        const pinDataUrl = await generateQrDataUrl(pushpinUrl, includeLogo);
         doc.addPage();
         doc.addImage(pinDataUrl, "PNG", qrX, 20, qrSize, qrSize);
         doc.setFontSize(14);
@@ -222,7 +198,16 @@ export default function QRListPage() {
             />
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-4">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+            <input
+              type="checkbox"
+              checked={includeLogo}
+              onChange={(e) => setIncludeLogo(e.target.checked)}
+              className="h-4 w-4 rounded border-stone-300 text-sky-600 focus:ring-sky-500"
+            />
+            Include logo
+          </label>
           <Link
             href="/qr/new"
             className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700"
@@ -291,12 +276,14 @@ export default function QRListPage() {
                         value={qrUrl}
                         size={128}
                         level="H"
-                        imageSettings={{
-                          src: "/speologie-org.png",
-                          height: 40,
-                          width: 40,
-                          excavate: true,
-                        }}
+                        {...(includeLogo && {
+                          imageSettings: {
+                            src: "/speologie-org.png",
+                            height: 40,
+                            width: 40,
+                            excavate: true,
+                          },
+                        })}
                       />
                     </div>
                     <div>
@@ -428,13 +415,15 @@ export default function QRListPage() {
                         <QRCodeSVG
                           value={url}
                           size={120}
-                        level="H"
-                        imageSettings={{
-                          src: "/speologie-org.png",
-                          height: 32,
-                          width: 32,
-                          excavate: true,
-                        }}
+                          level="H"
+                          {...(includeLogo && {
+                            imageSettings: {
+                              src: "/speologie-org.png",
+                              height: 32,
+                              width: 32,
+                              excavate: true,
+                            },
+                          })}
                         />
                       </button>
                       <p className="mt-2 truncate text-center text-xs font-medium text-stone-700 dark:text-stone-300">
