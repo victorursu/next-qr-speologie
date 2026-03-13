@@ -213,14 +213,14 @@ export default function EditQRPage() {
 
   if (fetchLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-100 dark:bg-stone-900">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <p className="text-stone-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 px-4 py-8 dark:bg-stone-900">
+    <div className="min-h-screen bg-transparent px-4 py-8">
       <div className="w-full">
         <Link
           href="/qr"
@@ -251,7 +251,7 @@ export default function EditQRPage() {
             onChange={(e) => setSlug(e.target.value)}
             placeholder="speologie/qr/abc123"
             required
-            className="mt-2 w-full rounded-lg border border-stone-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+            className="mt-2 w-full rounded-lg border border-stone-300 px-4 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
           />
 
           <label className="mt-4 block text-sm font-medium text-stone-700 dark:text-stone-300">
@@ -295,7 +295,7 @@ export default function EditQRPage() {
                   </span>
                 </div>
               ))}
-              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-stone-300 text-stone-500 hover:border-amber-500 hover:text-amber-600 dark:border-stone-600 dark:hover:border-amber-500">
+              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-stone-300 text-stone-500 hover:border-sky-500 hover:text-sky-600 dark:border-stone-600 dark:hover:border-sky-500">
                 <input
                   type="file"
                   accept="image/*"
@@ -345,7 +345,7 @@ export default function EditQRPage() {
                         <button
                           type="button"
                           onClick={() => handlePushpinSave(pin.id)}
-                          className="rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
+                          className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700"
                         >
                           Save pushpin
                         </button>
@@ -361,7 +361,7 @@ export default function EditQRPage() {
             <button
               type="submit"
               disabled={loading || !cave}
-              className="flex-1 rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
             >
               {loading ? "Saving..." : "Save"}
             </button>

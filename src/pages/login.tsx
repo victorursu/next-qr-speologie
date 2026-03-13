@@ -31,10 +31,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-stone-100 px-4 dark:bg-stone-900">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-transparent px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-6 text-center text-2xl font-bold text-stone-800 dark:text-stone-100">
-          Speologie QR
+          QR Deeplinking into Speologie.org mobile app
         </h1>
         <form
           onSubmit={handleSubmit}
@@ -55,12 +55,12 @@ export default function LoginPage() {
             placeholder="Enter password"
             required
             autoFocus
-            className="mt-2 w-full rounded-lg border border-stone-300 px-4 py-2 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+            className="mt-2 w-full rounded-lg border border-stone-300 px-4 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
           />
           <button
             type="submit"
             disabled={loading}
-            className="mt-4 w-full rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+            className="mt-4 w-full rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>

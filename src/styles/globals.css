@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
+/* Force light theme - disable dark mode */
+@custom-variant dark (&:where(.never-dark, .never-dark *));
+
 :root {
-  --background: #ffffff;
+  --background: #f5f5f4;
   --foreground: #171717;
 }
 
@@ -12,15 +15,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  min-height: 100vh;
 }
 
 body {
-  background: var(--background);
+  background-color: #e7e5e4;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }

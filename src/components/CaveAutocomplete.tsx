@@ -117,7 +117,7 @@ export function CaveAutocomplete({
           required={required && !value}
           disabled={disabled}
           autoComplete="off"
-          className="w-full rounded-lg border border-stone-300 px-4 py-2 pr-20 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+          className="w-full rounded-lg border border-stone-300 px-4 py-2 pr-20 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
         />
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1">
           {value && (
@@ -140,7 +140,7 @@ export function CaveAutocomplete({
           {results.length === 0 ? (
             <li className="px-4 py-2 text-sm text-stone-500">
               {searchError ? (
-                <span className="text-amber-600 dark:text-amber-500">
+                <span className="text-sky-600 dark:text-sky-500">
                   {searchError}
                 </span>
               ) : (

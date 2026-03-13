@@ -37,7 +37,7 @@ export default function NewQRPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100 px-4 py-8 dark:bg-stone-900">
+    <div className="min-h-screen bg-transparent px-4 py-8">
       <div className="mx-auto max-w-md">
         <Link
           href="/qr"
@@ -78,7 +78,7 @@ export default function NewQRPage() {
             <button
               type="submit"
               disabled={loading || !cave}
-              className="flex-1 rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create"}
             </button>

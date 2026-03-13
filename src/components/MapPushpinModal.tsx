@@ -90,7 +90,7 @@ export function MapPushpinModal({
               type="button"
               onClick={handleSubmit}
               disabled={saving}
-              className="rounded bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -163,7 +163,7 @@ export function MapPushpinModal({
                 type="button"
                 onClick={handleConfirmAdd}
                 disabled={!addingName.trim()}
-                className="rounded bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
               >
                 Add
               </button>

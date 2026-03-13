@@ -18,3 +18,14 @@ export function getQrRedirectUrl(slug: string): string {
   const uniquePart = slug.split("/").pop() ?? slug;
   return `${QR_BASE_URL}/${uniquePart}`;
 }
+
+/**
+ * Returns the deeplink URL for cave QR codes: speologie://cave-qr/[uniquePart]
+ * Extracts the unique part from slug (e.g. "speologie/qr/Rpmi9vr5j9" → "speologie://cave-qr/Rpmi9vr5j9")
+ * Used for QR code generation (display, download, PDF)
+ */
+export function getQrCaveUrl(slug: string): string {
+  const uniquePart = slug.split("/").pop() ?? slug;
+  return `speologie://cave-qr/${uniquePart}`;
+}
+

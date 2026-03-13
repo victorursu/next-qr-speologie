@@ -16,7 +16,8 @@ export default async function handler(
       .from("speologieqr")
       .select(`
         *,
-        cave:speologiepesteri(id, title)
+        cave:speologiepesteri(id, title),
+        maps:speologieqrmap(id, pushpins:speologieqrmappushpin(id))
       `)
       .order("created_at", { ascending: false });
 
@@ -30,7 +31,18 @@ export default async function handler(
     if (error) {
       return res.status(500).json({ error: error.message });
     }
-    return res.status(200).json(data);
+
+    const withPushpinCount = (data ?? []).map((row: { maps?: { pushpins?: unknown[] }[] }) => {
+      const maps = row.maps ?? [];
+      const pushpinCount = maps.reduce(
+        (sum, m) => sum + (m.pushpins?.length ?? 0),
+        0
+      );
+      const { maps: _, ...rest } = row as { maps?: unknown };
+      return { ...rest, pushpin_count: pushpinCount };
+    });
+
+    return res.status(200).json(withPushpinCount);
   }
 
   if (req.method === "POST") {

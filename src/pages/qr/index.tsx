@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
 import { CaveAutocomplete, type Cave } from "@/components/CaveAutocomplete";
-import { getQrRedirectUrl } from "@/lib/qr";
+import { getQrCaveUrl } from "@/lib/qr";
 import { withAuth } from "@/lib/withAuth";
 
 export const getServerSideProps = withAuth;
@@ -29,9 +30,10 @@ type QRCode = {
   cave: CaveRef;
   created_at: string;
   updated_at: string;
+  pushpin_count?: number;
 };
 
-const PUSHPIN_QR_PREFIX = "speologieorg://qr/";
+const PUSHPIN_QR_PREFIX = "speologie://qr/";
 
 export default function QRListPage() {
   const router = useRouter();
@@ -110,7 +112,7 @@ export default function QRListPage() {
             resolve();
           };
           logo.onerror = reject;
-          logo.src = "/favicon-96x96.png";
+          logo.src = "/speologie-org.png";
         });
       }
 
@@ -125,14 +127,93 @@ export default function QRListPage() {
     }
   };
 
+  const generateQrDataUrl = async (url: string): Promise<string> => {
+    const size = 512;
+    const logoSize = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    await QRCode.toCanvas(canvas, url, {
+      width: size,
+      margin: 2,
+      errorCorrectionLevel: "H",
+    });
+
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        logo.onload = () => {
+          const x = (size - logoSize) / 2;
+          const y = (size - logoSize) / 2;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(x, y, logoSize, logoSize);
+          ctx.drawImage(logo, x, y, logoSize, logoSize);
+          resolve();
+        };
+        logo.onerror = reject;
+        logo.src = "/speologie-org.png";
+      });
+    }
+    return canvas.toDataURL("image/png");
+  };
+
+  const handleDownloadPdf = async (
+    qrUrl: string,
+    slug: string,
+    caveName: string,
+    itemId: string
+  ) => {
+    try {
+      const dataUrl = await generateQrDataUrl(qrUrl);
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      const qrSize = 120; // 2x original (60)
+      const qrX = (pageW - qrSize) / 2;
+
+      // Page 1: main QR + cave name
+      doc.addImage(dataUrl, "PNG", qrX, 20, qrSize, qrSize);
+      doc.setFontSize(14);
+      doc.text(caveName || slug, pageW / 2, 20 + qrSize + 12, {
+        align: "center",
+      });
+
+      // Page 2+: pushpin QR codes
+      const mapsRes = await fetch(`/api/qr/${itemId}/maps`);
+      const maps: MapRecord[] = await mapsRes.json();
+      const pushpins = maps.flatMap((m) => m.pushpins ?? []);
+
+      for (const pin of pushpins) {
+        const pushpinUrl = `${PUSHPIN_QR_PREFIX}${pin.identifier}`;
+        const pinDataUrl = await generateQrDataUrl(pushpinUrl);
+        doc.addPage();
+        doc.addImage(pinDataUrl, "PNG", qrX, 20, qrSize, qrSize);
+        doc.setFontSize(14);
+        doc.text(pin.name || pin.identifier, pageW / 2, 20 + qrSize + 12, {
+          align: "center",
+        });
+        doc.text(caveName || slug, pageW / 2, 20 + qrSize + 24, {
+          align: "center",
+        });
+      }
+
+      doc.save(`${slug.replace(/\//g, "-")}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download PDF");
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full bg-stone-100 px-4 py-8 dark:bg-stone-900">
-      <div className="w-full">
-        <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium text-stone-700 dark:text-stone-300">
-            Filter by cave
+    <div className="min-h-screen w-full bg-transparent px-4 py-8">
+      <header className="sticky top-0 z-20 -mx-4 -mt-8 mb-6 flex items-center justify-between gap-4 border-b border-stone-200 bg-white/95 px-4 py-3 backdrop-blur-sm">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <label className="shrink-0 text-sm font-medium text-stone-700">
+            Filter cave
           </label>
-          <div className="max-w-xs">
+          <div className="min-w-0 max-w-xs flex-1">
             <CaveAutocomplete
               value={caveFilter}
               onChange={setCaveFilter}
@@ -141,35 +222,29 @@ export default function QRListPage() {
             />
           </div>
         </div>
-
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <Link
-              href="/"
-              className="text-sm text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-300"
-            >
-              ← Back
-            </Link>
-            <h1 className="mt-2 text-2xl font-bold text-stone-800 dark:text-stone-100">
-              QR Codes
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/qr/new"
-              className="rounded-lg bg-amber-600 px-4 py-2 font-medium text-white transition-colors hover:bg-amber-700"
-            >
-              + New QR Code
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-sm text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-300"
-            >
-              Sign out
-            </button>
-          </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/qr/new"
+            className="rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700"
+          >
+            New QR
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded p-2 text-red-600 hover:bg-red-50"
+            title="Logout"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
+      </header>
+
+      <div className="w-full">
 
         {loading && (
           <div className="rounded-lg border border-stone-200 bg-white p-8 text-center text-stone-500 dark:border-stone-700 dark:bg-stone-800">
@@ -190,7 +265,7 @@ export default function QRListPage() {
             </p>
             <Link
               href="/qr/new"
-              className="mt-4 inline-block text-amber-600 hover:text-amber-700 dark:text-amber-500"
+              className="mt-4 inline-block text-sky-600 hover:text-sky-700 dark:text-sky-500"
             >
               Create QR Code →
             </Link>
@@ -200,7 +275,7 @@ export default function QRListPage() {
         {!loading && !error && items.length > 0 && (
           <div className="space-y-3">
             {items.map((item) => {
-              const qrUrl = getQrRedirectUrl(item.slug);
+              const qrUrl = getQrCaveUrl(item.slug);
               return (
                 <div
                   key={item.id}
@@ -217,7 +292,7 @@ export default function QRListPage() {
                         size={128}
                         level="H"
                         imageSettings={{
-                          src: "/favicon-96x96.png",
+                          src: "/speologie-org.png",
                           height: 40,
                           width: 40,
                           excavate: true,
@@ -225,32 +300,84 @@ export default function QRListPage() {
                       />
                     </div>
                     <div>
-                      <p className="font-mono text-sm font-medium text-stone-800 dark:text-stone-100">
-                        {item.slug}
+                      <p className="font-mono text-base font-medium text-stone-800 dark:text-stone-100">
+                        {qrUrl}
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                        Adaugat la:{" "}
+                        {new Date(item.created_at).toLocaleDateString("ro-RO", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </p>
                       <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
                         Cave: {item.cave?.title ?? item.caves_id}
+                        <span className="ml-1 font-mono text-stone-400 dark:text-stone-500">
+                          ({item.caves_id})
+                        </span>
                       </p>
+                      {(item.pushpin_count ?? 0) > 0 && (
+                        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
+                          Pushpins with QR codes: {item.pushpin_count}
+                        </p>
+                      )}
                     </div>
                   </div>
-                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() =>
+                      handleDownloadPdf(
+                        qrUrl,
+                        item.slug,
+                        item.cave?.title ?? item.caves_id ?? "",
+                        item.id
+                      )
+                    }
+                    className="rounded p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-700"
+                    title="Download PDF"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <path d="M12 18v-6" />
+                      <path d="M9 15l3 3 3-3" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => handleDownload(qrUrl, item.slug)}
-                    className="rounded px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-700"
+                    className="rounded p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-700"
+                    title="Download PNG"
                   >
-                    Download
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
                   </button>
                   <Link
                     href={`/qr/${item.id}/edit`}
-                    className="rounded px-3 py-1.5 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-950"
+                    className="rounded p-2 text-sky-600 hover:bg-sky-50 dark:text-sky-500 dark:hover:bg-sky-950"
+                    title="Edit"
                   >
-                    Edit
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    </svg>
                   </Link>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="rounded px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-500 dark:hover:bg-red-950"
+                    className="rounded p-2 text-red-600 hover:bg-red-50 dark:text-red-500 dark:hover:bg-red-950"
+                    title="Delete"
                   >
-                    Delete
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      <line x1="10" y1="11" x2="10" y2="17" />
+                      <line x1="14" y1="11" x2="14" y2="17" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -293,17 +420,23 @@ export default function QRListPage() {
                       key={pin.id}
                       className="flex flex-col items-center rounded-lg border border-stone-200 p-3 dark:border-stone-600"
                     >
-                      <QRCodeSVG
-                        value={url}
-                        size={120}
+                      <button
+                        type="button"
+                        onClick={() => alert(url)}
+                        className="cursor-pointer rounded p-1 hover:opacity-80"
+                      >
+                        <QRCodeSVG
+                          value={url}
+                          size={120}
                         level="H"
                         imageSettings={{
-                          src: "/favicon-96x96.png",
+                          src: "/speologie-org.png",
                           height: 32,
                           width: 32,
                           excavate: true,
                         }}
-                      />
+                        />
+                      </button>
                       <p className="mt-2 truncate text-center text-xs font-medium text-stone-700 dark:text-stone-300">
                         {pin.name || pin.identifier}
                       </p>
