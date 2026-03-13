@@ -258,7 +258,7 @@ export default function QRListPage() {
         )}
 
         {!loading && !error && items.length > 0 && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {items.map((item) => {
               const qrUrl = getQrCaveUrl(item.slug);
               return (
@@ -268,29 +268,34 @@ export default function QRListPage() {
                   tabIndex={0}
                   onClick={() => handleRowClick(item)}
                   onKeyDown={(e) => e.key === "Enter" && handleRowClick(item)}
-                  className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-stone-200 bg-white p-4 transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:bg-stone-700/50"
+                  className="flex cursor-pointer flex-col overflow-hidden rounded-lg border border-stone-200 bg-white transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:bg-stone-700/50"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 rounded border border-stone-200 bg-white p-4 dark:border-stone-600">
-                      <QRCodeSVG
-                        value={qrUrl}
-                        size={128}
-                        level="H"
-                        {...(includeLogo && {
-                          imageSettings: {
-                            src: "/speologie-org.png",
-                            height: 40,
-                            width: 40,
-                            excavate: true,
-                          },
-                        })}
-                      />
+                  <div className="flex flex-1 gap-4 p-4">
+                    <div className="flex-shrink-0">
+                      <div className="rounded border border-stone-200 bg-white p-2 dark:border-stone-600">
+                        <QRCodeSVG
+                          value={qrUrl}
+                          size={128}
+                          level="H"
+                          {...(includeLogo && {
+                            imageSettings: {
+                              src: "/speologie-org.png",
+                              height: 40,
+                              width: 40,
+                              excavate: true,
+                            },
+                          })}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-mono text-base font-medium text-stone-800 dark:text-stone-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-stone-500 dark:text-stone-400">
+                        Cave: {item.cave?.title ?? item.caves_id}({item.caves_id})
+                      </p>
+                      <p className="mt-1 font-mono text-sm font-medium text-stone-800 dark:text-stone-100">
                         {qrUrl}
                       </p>
-                      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                      <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                         Adaugat la:{" "}
                         {new Date(item.created_at).toLocaleDateString("ro-RO", {
                           day: "numeric",
@@ -300,75 +305,72 @@ export default function QRListPage() {
                           minute: "2-digit",
                         })}
                       </p>
-                      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                        Cave: {item.cave?.title ?? item.caves_id}
-                        <span className="ml-1 font-mono text-stone-400 dark:text-stone-500">
-                          ({item.caves_id})
-                        </span>
-                      </p>
                       {(item.pushpin_count ?? 0) > 0 && (
-                        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
+                        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
                           Pushpins with QR codes: {item.pushpin_count}
                         </p>
                       )}
                     </div>
                   </div>
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() =>
-                      handleDownloadPdf(
-                        qrUrl,
-                        item.slug,
-                        item.cave?.title ?? item.caves_id ?? "",
-                        item.id
-                      )
-                    }
-                    className="rounded p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-700"
-                    title="Download PDF"
+                  <footer
+                    className="flex justify-center gap-1 border-t border-stone-200 bg-stone-50 p-2 dark:border-stone-600 dark:bg-stone-800/50"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <path d="M12 18v-6" />
-                      <path d="M9 15l3 3 3-3" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDownload(qrUrl, item.slug)}
-                    className="rounded p-2 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-700"
-                    title="Download PNG"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                  </button>
-                  <Link
-                    href={`/qr/${item.id}/edit`}
-                    className="rounded p-2 text-sky-600 hover:bg-sky-50 dark:text-sky-500 dark:hover:bg-sky-950"
-                    title="Edit"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                    </svg>
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="rounded p-2 text-red-600 hover:bg-red-50 dark:text-red-500 dark:hover:bg-red-950"
-                    title="Delete"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 6h18" />
-                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                  </button>
+                    <button
+                      onClick={() =>
+                        handleDownloadPdf(
+                          qrUrl,
+                          item.slug,
+                          item.cave?.title ?? item.caves_id ?? "",
+                          item.id
+                        )
+                      }
+                      className="rounded p-2 text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-700"
+                      title="Download PDF"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <path d="M12 18v-6" />
+                        <path d="M9 15l3 3 3-3" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDownload(qrUrl, item.slug)}
+                      className="rounded p-2 text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-700"
+                      title="Download PNG"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </button>
+                    <Link
+                      href={`/qr/${item.id}/edit`}
+                      className="rounded p-2 text-sky-600 hover:bg-sky-100 dark:text-sky-500 dark:hover:bg-sky-950"
+                      title="Edit"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                      </svg>
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="rounded p-2 text-red-600 hover:bg-red-100 dark:text-red-500 dark:hover:bg-red-950"
+                      title="Delete"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    </button>
+                  </footer>
                 </div>
-              </div>
-            );
+              );
             })}
           </div>
         )}
