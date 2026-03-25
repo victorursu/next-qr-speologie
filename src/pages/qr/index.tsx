@@ -136,6 +136,74 @@ export default function QRListPage() {
     }
   };
 
+  const handleDownloadSvg = async (qrUrl: string, slug: string) => {
+    try {
+      let svgString = await QRCode.toString(qrUrl, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 512,
+      });
+
+      if (includeLogo) {
+        const logoRes = await fetch("/speologie-org.png");
+        const logoBlob = await logoRes.blob();
+        const logoDataUrl = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result as string);
+          r.onerror = reject;
+          r.readAsDataURL(logoBlob);
+        });
+
+        const doc = new DOMParser().parseFromString(svgString, "image/svg+xml");
+        const svg = doc.documentElement;
+        const vbParts = svg.getAttribute("viewBox")?.trim().split(/\s+/) ?? [];
+        const vbW = Number(vbParts[2]) || 0;
+        const vbH = Number(vbParts[3]) || vbW;
+        const logoW = vbW * 0.25;
+        const logoH = vbH * 0.25;
+        const logoX = (vbW - logoW) / 2;
+        const logoY = (vbH - logoH) / 2;
+
+        const g = doc.createElementNS("http://www.w3.org/2000/svg", "g");
+        const rect = doc.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", String(logoX));
+        rect.setAttribute("y", String(logoY));
+        rect.setAttribute("width", String(logoW));
+        rect.setAttribute("height", String(logoH));
+        rect.setAttribute("fill", "#ffffff");
+        const imageEl = doc.createElementNS("http://www.w3.org/2000/svg", "image");
+        imageEl.setAttribute("href", logoDataUrl);
+        imageEl.setAttributeNS(
+          "http://www.w3.org/1999/xlink",
+          "xlink:href",
+          logoDataUrl
+        );
+        imageEl.setAttribute("x", String(logoX));
+        imageEl.setAttribute("y", String(logoY));
+        imageEl.setAttribute("width", String(logoW));
+        imageEl.setAttribute("height", String(logoH));
+        imageEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        g.appendChild(rect);
+        g.appendChild(imageEl);
+        svg.appendChild(g);
+        svgString = new XMLSerializer().serializeToString(doc);
+      }
+
+      const blob = new Blob([svgString], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${slug.replace(/\//g, "-")}.svg`;
+      link.href = objectUrl;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download SVG");
+    }
+  };
+
   const handleDownloadPdf = async (
     qrUrl: string,
     slug: string,
@@ -344,6 +412,16 @@ export default function QRListPage() {
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="7 10 12 15 17 10" />
                         <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDownloadSvg(qrUrl, item.slug)}
+                      className="rounded p-2 text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-700"
+                      title="Download SVG"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="16 18 22 12 16 6" />
+                        <polyline points="8 6 2 12 8 18" />
                       </svg>
                     </button>
                     <Link
