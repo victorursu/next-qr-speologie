@@ -512,6 +512,19 @@ export default function QRListPage() {
                       <p className="mt-0.5 truncate text-center text-xs text-stone-500 dark:text-stone-400">
                         {pin.identifier}
                       </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDownloadSvg(
+                            url,
+                            `${pushpinModal.slug.replace(/\//g, "-")}-pushpin-${pin.identifier}`
+                          );
+                        }}
+                        className="mt-2 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-500"
+                      >
+                        Download SVG
+                      </button>
                     </div>
                   );
                 })}
