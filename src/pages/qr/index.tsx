@@ -2,10 +2,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { jsPDF } from "jspdf";
+import "svg2pdf.js";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
 import { CaveAutocomplete, type Cave } from "@/components/CaveAutocomplete";
-import { getQrCaveUrl } from "@/lib/qr";
+import {
+  getQrCaveUrl,
+  qrToDxfString,
+  qrToLaserEngraveSvgString,
+} from "@/lib/qr";
 import { withAuth } from "@/lib/withAuth";
 
 export const getServerSideProps = withAuth;
@@ -138,11 +143,20 @@ export default function QRListPage() {
 
   const handleDownloadSvg = async (qrUrl: string, slug: string) => {
     try {
-      let svgString = await QRCode.toString(qrUrl, {
-        errorCorrectionLevel: "H",
-        margin: 2,
-        width: 512,
-      });
+      let svgString: string;
+
+      if (!includeLogo) {
+        svgString = qrToLaserEngraveSvgString(qrUrl, {
+          margin: 2,
+          outputSize: 512,
+        });
+      } else {
+        svgString = await QRCode.toString(qrUrl, {
+          errorCorrectionLevel: "H",
+          margin: 2,
+          width: 512,
+        });
+      }
 
       if (includeLogo) {
         const logoRes = await fetch("/speologie-org.png");
@@ -204,6 +218,47 @@ export default function QRListPage() {
     }
   };
 
+  const handleDownloadDxf = (qrUrl: string, slug: string) => {
+    try {
+      const dxf = qrToDxfString(qrUrl, { margin: 2, mmPerModule: 1 });
+      const blob = new Blob([dxf], { type: "application/dxf" });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${slug.replace(/\//g, "-")}.dxf`;
+      link.href = objectUrl;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download DXF");
+    }
+  };
+
+  const addQrToPdfPage = async (
+    doc: jsPDF,
+    url: string,
+    qrX: number,
+    y: number,
+    qrSize: number
+  ) => {
+    if (includeLogo) {
+      const dataUrl = await generateQrDataUrl(url, true);
+      doc.addImage(dataUrl, "PNG", qrX, y, qrSize, qrSize);
+    } else {
+      const svgString = qrToLaserEngraveSvgString(url, {
+        margin: 2,
+        outputSize: 512,
+      });
+      const parsed = new DOMParser().parseFromString(svgString, "image/svg+xml");
+      await doc.svg(parsed.documentElement, {
+        x: qrX,
+        y,
+        width: qrSize,
+        height: qrSize,
+      });
+    }
+  };
+
   const handleDownloadPdf = async (
     qrUrl: string,
     slug: string,
@@ -211,34 +266,31 @@ export default function QRListPage() {
     itemId: string
   ) => {
     try {
-      const dataUrl = await generateQrDataUrl(qrUrl, includeLogo);
       const doc = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
       const qrSize = 120; // 2x original (60)
       const qrX = (pageW - qrSize) / 2;
+      const yTop = 20;
 
-      // Page 1: main QR + cave name
-      doc.addImage(dataUrl, "PNG", qrX, 20, qrSize, qrSize);
+      await addQrToPdfPage(doc, qrUrl, qrX, yTop, qrSize);
       doc.setFontSize(14);
-      doc.text(caveName || slug, pageW / 2, 20 + qrSize + 12, {
+      doc.text(caveName || slug, pageW / 2, yTop + qrSize + 12, {
         align: "center",
       });
 
-      // Page 2+: pushpin QR codes
       const mapsRes = await fetch(`/api/qr/${itemId}/maps`);
       const maps: MapRecord[] = await mapsRes.json();
       const pushpins = maps.flatMap((m) => m.pushpins ?? []);
 
       for (const pin of pushpins) {
         const pushpinUrl = `${PUSHPIN_QR_PREFIX}${pin.identifier}`;
-        const pinDataUrl = await generateQrDataUrl(pushpinUrl, includeLogo);
         doc.addPage();
-        doc.addImage(pinDataUrl, "PNG", qrX, 20, qrSize, qrSize);
+        await addQrToPdfPage(doc, pushpinUrl, qrX, yTop, qrSize);
         doc.setFontSize(14);
-        doc.text(pin.name || pin.identifier, pageW / 2, 20 + qrSize + 12, {
+        doc.text(pin.name || pin.identifier, pageW / 2, yTop + qrSize + 12, {
           align: "center",
         });
-        doc.text(caveName || slug, pageW / 2, 20 + qrSize + 24, {
+        doc.text(caveName || slug, pageW / 2, yTop + qrSize + 24, {
           align: "center",
         });
       }
@@ -424,6 +476,19 @@ export default function QRListPage() {
                         <polyline points="8 6 2 12 8 18" />
                       </svg>
                     </button>
+                    <button
+                      onClick={() => handleDownloadDxf(qrUrl, item.slug)}
+                      className="rounded p-2 text-stone-600 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-700"
+                      title="Download DXF (filled modules, mm — no logo)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3v3" />
+                        <path d="M12 18v3" />
+                        <path d="M3 12h3" />
+                        <path d="M18 12h3" />
+                        <rect x="7" y="7" width="10" height="10" rx="1" />
+                      </svg>
+                    </button>
                     <Link
                       href={`/qr/${item.id}/edit`}
                       className="rounded p-2 text-sky-600 hover:bg-sky-100 dark:text-sky-500 dark:hover:bg-sky-950"
@@ -512,19 +577,35 @@ export default function QRListPage() {
                       <p className="mt-0.5 truncate text-center text-xs text-stone-500 dark:text-stone-400">
                         {pin.identifier}
                       </p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleDownloadSvg(
-                            url,
-                            `${pushpinModal.slug.replace(/\//g, "-")}-pushpin-${pin.identifier}`
-                          );
-                        }}
-                        className="mt-2 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-500"
-                      >
-                        Download SVG
-                      </button>
+                      <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDownloadSvg(
+                              url,
+                              `${pushpinModal.slug.replace(/\//g, "-")}-pushpin-${pin.identifier}`
+                            );
+                          }}
+                          className="text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-500"
+                        >
+                          Download SVG
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadDxf(
+                              url,
+                              `${pushpinModal.slug.replace(/\//g, "-")}-pushpin-${pin.identifier}`
+                            );
+                          }}
+                          className="text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-500"
+                          title="Filled modules in mm (no logo)"
+                        >
+                          Download DXF
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
