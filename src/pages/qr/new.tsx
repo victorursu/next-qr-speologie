@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { CaveAutocomplete, type Cave } from "@/components/CaveAutocomplete";
@@ -11,10 +11,39 @@ export default function NewQRPage() {
   const [cave, setCave] = useState<Cave | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [existingQrId, setExistingQrId] = useState<string | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(false);
+
+  useEffect(() => {
+    if (!cave) {
+      setExistingQrId(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingExisting(true);
+    setExistingQrId(null);
+    fetch(`/api/qr?cave=${encodeURIComponent(String(cave.id))}`)
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (cancelled) return;
+        const arr = Array.isArray(data) ? data : [];
+        const first = arr[0] as { id?: string } | undefined;
+        setExistingQrId(first?.id != null ? String(first.id) : null);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingQrId(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cave?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cave) return;
+    if (!cave || existingQrId) return;
 
     setLoading(true);
     setError(null);
@@ -25,9 +54,15 @@ export default function NewQRPage() {
       body: JSON.stringify({ caves_id: cave.id }),
     });
 
-    const data = await res.json();
+    const data = (await res.json()) as {
+      error?: string;
+      existing_id?: string;
+    };
 
     if (!res.ok) {
+      if (res.status === 409 && data.existing_id) {
+        setExistingQrId(data.existing_id);
+      }
       setError(data.error || "Failed to create");
       setLoading(false);
       return;
@@ -49,7 +84,9 @@ export default function NewQRPage() {
           Create QR Code
         </h1>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Slug is auto-generated. Select a cave (search ignores diacritics).
+          Slug is auto-generated. Select a cave (search ignores diacritics). Each
+          cave can only have one QR—if one already exists, edit it from the list
+          instead of creating another.
         </p>
 
         <form
@@ -74,10 +111,32 @@ export default function NewQRPage() {
             />
           </div>
 
+          {cave && checkingExisting && (
+            <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">
+              Checking for an existing QR for this cave…
+            </p>
+          )}
+
+          {cave && !checkingExisting && existingQrId && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              <p className="font-medium">This cave already has a QR code</p>
+              <p className="mt-1 text-amber-900/90 dark:text-amber-200/90">
+                You cannot create a second QR for the same cave. Open the list,
+                find this cave’s QR, and edit it there—or use the link below.
+              </p>
+              <Link
+                href={`/qr/${existingQrId}/edit`}
+                className="mt-3 inline-block font-medium text-amber-900 underline decoration-amber-700/60 underline-offset-2 hover:text-amber-950 dark:text-amber-100 dark:hover:text-white"
+              >
+                Edit existing QR →
+              </Link>
+            </div>
+          )}
+
           <div className="mt-6 flex gap-3">
             <button
               type="submit"
-              disabled={loading || !cave}
+              disabled={loading || !cave || !!existingQrId || checkingExisting}
               className="flex-1 rounded-lg bg-sky-600 px-4 py-2 font-medium text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create"}

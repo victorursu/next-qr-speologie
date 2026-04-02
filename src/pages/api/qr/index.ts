@@ -52,6 +52,20 @@ export default async function handler(
       return res.status(400).json({ error: "caves_id is required" });
     }
 
+    const { data: existing } = await supabase
+      .from("speologieqr")
+      .select("id")
+      .eq("caves_id", caves_id)
+      .maybeSingle();
+
+    if (existing?.id) {
+      return res.status(409).json({
+        error:
+          "A QR code already exists for this cave. Find it in the list and edit it instead of creating another.",
+        existing_id: existing.id,
+      });
+    }
+
     const slug = generateSlug();
 
     const { data, error } = await supabase
@@ -61,6 +75,18 @@ export default async function handler(
       .single();
 
     if (error) {
+      if (error.code === "23505") {
+        const { data: row } = await supabase
+          .from("speologieqr")
+          .select("id")
+          .eq("caves_id", caves_id)
+          .maybeSingle();
+        return res.status(409).json({
+          error:
+            "A QR code already exists for this cave. Find it in the list and edit it instead of creating another.",
+          existing_id: row?.id,
+        });
+      }
       return res.status(500).json({ error: error.message });
     }
     return res.status(201).json(data);

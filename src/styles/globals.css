@@ -25,3 +25,38 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* TipTap / ProseMirror (pushpin HTML editor) — at least ~7 text lines */
+.pushpin-html-editor .ProseMirror {
+  min-height: 10.5rem; /* ~7 lines if 7lh unsupported */
+  min-height: 7lh;
+  outline: none;
+}
+.pushpin-html-editor .ProseMirror p {
+  margin: 0.5em 0;
+}
+.pushpin-html-editor .ProseMirror ul {
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+.pushpin-html-editor .ProseMirror li {
+  margin: 0.25em 0;
+}
+.pushpin-html-editor .ProseMirror li p {
+  margin: 0;
+}
+.pushpin-html-editor .ProseMirror strong {
+  font-weight: 700;
+}
+.pushpin-html-editor .ProseMirror em {
+  font-style: italic;
+}
+.pushpin-html-editor .ProseMirror u {
+  text-decoration: underline;
+}
+.pushpin-html-editor .ProseMirror s {
+  text-decoration: line-through;
+}
+.pushpin-html-editor .ProseMirror-focused {
+  outline: none;
+}

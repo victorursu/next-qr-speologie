@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { nanoid } from "nanoid";
+import { PushpinHtmlEditor } from "@/components/PushpinHtmlEditor";
+import { CollapsiblePushpinContent } from "@/components/CollapsiblePushpinContent";
 
 export type Pushpin = {
   id?: string;
@@ -87,6 +89,7 @@ export function MapPushpinModal({
       x: pendingPoint.x,
       y: pendingPoint.y,
       name: addingName.trim(),
+      html: "<p></p>",
     };
     setPushpins((prev) => [...prev, newPin]);
     setPendingPoint(null);
@@ -108,6 +111,12 @@ export function MapPushpinModal({
   const handleRemove = (identifier: string) => {
     setPushpins((prev) => prev.filter((p) => p.identifier !== identifier));
   };
+
+  const updatePin = useCallback((identifier: string, patch: Partial<Pushpin>) => {
+    setPushpins((prev) =>
+      prev.map((p) => (p.identifier === identifier ? { ...p, ...patch } : p))
+    );
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -313,15 +322,51 @@ export function MapPushpinModal({
           {pushpins.length > 0 && (
             <div className="mt-4">
               <h3 className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
-                Pushpins ({pushpins.length})
+                Pushpins ({pushpins.length}) — names & HTML content
               </h3>
-              <ul className="space-y-1 text-sm text-stone-600 dark:text-stone-400">
+              <div className="max-h-[40vh] space-y-4 overflow-y-auto pr-1">
                 {pushpins.map((pin) => (
-                  <li key={pin.identifier}>
-                    {pin.name} ({pin.identifier})
-                  </li>
+                  <div
+                    key={pin.identifier}
+                    className="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-stone-600 dark:bg-stone-900/40"
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-xs text-stone-500 dark:text-stone-400">
+                        {pin.identifier}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(pin.identifier)}
+                        className="text-xs text-red-600 hover:underline dark:text-red-400"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <label className="block text-xs font-medium text-stone-600 dark:text-stone-400">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={pin.name}
+                      onChange={(e) =>
+                        updatePin(pin.identifier, { name: e.target.value })
+                      }
+                      className="mb-2 mt-0.5 w-full rounded border border-stone-300 px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100"
+                    />
+                    <CollapsiblePushpinContent label="Content">
+                      <PushpinHtmlEditor
+                        key={pin.identifier}
+                        editorKey={pin.identifier}
+                        value={pin.html ?? ""}
+                        onChange={(html) =>
+                          updatePin(pin.identifier, { html })
+                        }
+                        placeholder="HTML content for this pushpin…"
+                      />
+                    </CollapsiblePushpinContent>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>

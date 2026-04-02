@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { CaveAutocomplete, type Cave } from "@/components/CaveAutocomplete";
 import { MapPushpinModal, type Pushpin } from "@/components/MapPushpinModal";
+import { PushpinHtmlEditor } from "@/components/PushpinHtmlEditor";
+import { CollapsiblePushpinContent } from "@/components/CollapsiblePushpinContent";
 import { withAuth } from "@/lib/withAuth";
 
 export const getServerSideProps = withAuth;
@@ -177,6 +179,7 @@ export default function EditQRPage() {
           x: p.x,
           y: p.y,
           name: p.name,
+          html: p.html ?? "",
         })),
       }),
     });
@@ -333,15 +336,19 @@ export default function EditQRPage() {
                           placeholder="Name"
                           className="w-full rounded border border-stone-300 px-3 py-2 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
                         />
-                        <textarea
-                          value={pushpinEdits[pin.id]?.html ?? pin.html ?? ""}
-                          onChange={(e) =>
-                            handlePushpinChange(pin.id, "html", e.target.value)
-                          }
-                          placeholder="HTML content"
-                          rows={3}
-                          className="w-full rounded border border-stone-300 px-3 py-2 text-sm font-mono dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
-                        />
+                        <CollapsiblePushpinContent label="Content">
+                          <PushpinHtmlEditor
+                            key={pin.id}
+                            editorKey={pin.id}
+                            value={
+                              pushpinEdits[pin.id]?.html ?? pin.html ?? ""
+                            }
+                            onChange={(html) =>
+                              handlePushpinChange(pin.id, "html", html)
+                            }
+                            placeholder="Description for this pushpin…"
+                          />
+                        </CollapsiblePushpinContent>
                         <button
                           type="button"
                           onClick={() => handlePushpinSave(pin.id)}

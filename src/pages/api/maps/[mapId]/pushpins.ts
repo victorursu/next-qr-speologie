@@ -36,12 +36,19 @@ export default async function handler(
   }
 
   const rows = pushpins.map(
-    (p: { identifier?: string; x: number; y: number; name: string }) => ({
+    (p: {
+      identifier?: string;
+      x: number;
+      y: number;
+      name: string;
+      html?: string;
+    }) => ({
       map_id: mapId,
       identifier: p.identifier ?? nanoid(10),
       x: Number(p.x),
       y: Number(p.y),
       name: p.name ?? "",
+      html: typeof p.html === "string" ? p.html : "",
     })
   );
 
